@@ -1,32 +1,45 @@
-import {ActionFunctionArgs, json, LoaderFunctionArgs} from "@remix-run/node";
+import {json, LoaderFunctionArgs} from "@remix-run/node";
 import {Ad, FakeSdk} from "~/fakeSdk";
 import {useLoaderData} from "@remix-run/react";
-import {jdid} from "~/cookies.server";
+import {useEffect, useState} from "react";
 
-// GET to this route
 export const loader = async ({request}: LoaderFunctionArgs) => {
-  const cookieHeader = request.headers.get('Cookie')
-  const jdidCookie = (await jdid.parse(cookieHeader)) || {}
-  console.log(cookieHeader)
-  const fakeSdk = new FakeSdk({apiKey: 'apiKey', env: 'dev'})
-  const ad = fakeSdk.fetchAd('cool-ad-type')
-  return json({adProps: ad.serialize(), jdid: jdidCookie.jdid})
-}
-
-// POST to this route
-export const action = async ({}: ActionFunctionArgs) => {
-  return null
+  const fakeSdk = new FakeSdk({apiKey: 'apiKey', env: 'dev'}, request)
+  const ad = fakeSdk.fetchAd('ssr-ad')
+  const cookie = fakeSdk.makeJdidCookie()
+  return json({ssrAdProps: ad.serialize(), jdid: cookie}, {headers: {'Set-Cookie': cookie}})
 }
 
 export default function Index() {
-  const {adProps} = useLoaderData<typeof loader>()
-  const ad = new Ad(adProps)
-  return (<p id="index-page">
-      {ad.type}
+  const {ssrAdProps} = useLoaderData<typeof loader>()
+  const [ssrAd] = useState<Ad>(new Ad(ssrAdProps))
+  const [csrAd, setCsrAd] = useState<Ad>()
+
+  useEffect(() => {
+    const fakeSdk = new FakeSdk({apiKey: 'apiKey', env: 'dev'})
+    setCsrAd(fakeSdk.fetchAd('csr-ad'))
+  }, [])
+
+  return (
+    <div style={{display: 'flex', flexDirection: 'column'}}>
+      <AdComponent ad={ssrAd}/>
+      {csrAd && <AdComponent ad={csrAd}/>}
+    </div>
+  )
+}
+
+interface AdComponentProps {
+  ad: Ad
+}
+const AdComponent = ({ad}: AdComponentProps) => {
+  return (<div style={{border: '1px solid black'}}>
+    <p>
+      adType: {ad.type}
       <br/>
-      {ad.flight}
+      flightId: {ad.flight}
       <br/>
-      <button onClick={() => ad.impress(1)}>impress</button>
-      <button onClick={() => ad.click(1)}>click</button>
-    </p>)
+    </p>
+    <button onClick={() => ad.impress(1)}>impress</button>
+    <button onClick={() => ad.click(1)}>click</button>
+  </div>)
 }
