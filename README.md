@@ -1,6 +1,11 @@
-# Welcome to Remix!
+# DM SDK SSR/CSR API PoC
 
-- [Remix Docs](https://remix.run/docs)
+This app is a proof of concept for a couple of ideas on how to unite the CSR and the SSR APIs of the DM SDK.
+
+1. How to allow attribution handlers (click, impress) with the SSR ads. We wrapped the ad info into a class that has click and impression handlers, (de)serialize that class instance to pass it form server state to client state. This allows the same Ad class to be used in both SSR and CSR as long as it's reconstructed with the same values.
+2. How to handle JDID in SSR, since we can't store it in localStorage. We provide a cookie that the roots partner must set in their SSR response, and then read that cookie to get the JDID in future requests.
+
+We still need to come up with a way to ensure that roots partners actually set the cookie we provide, since this PoC only *allows* them to do so but doesn't *require* it.
 
 ## Development
 
@@ -11,28 +16,3 @@ npm run dev
 ```
 
 This starts your app in development mode, rebuilding assets on file changes.
-
-## Deployment
-
-First, build your app for production:
-
-```sh
-npm run build
-```
-
-Then run the app in production mode:
-
-```sh
-npm start
-```
-
-Now you'll need to pick a host to deploy it to.
-
-### DIY
-
-If you're familiar with deploying node applications, the built-in Remix app server is production-ready.
-
-Make sure to deploy the output of `remix build`
-
-- `build/server`
-- `build/client`
